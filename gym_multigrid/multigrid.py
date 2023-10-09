@@ -1315,7 +1315,8 @@ class MultiGridEnv(gym.Env):
                 fwd_cell = self.grid.get(*fwd_pos)
                 if fwd_cell is not None:
                     if fwd_cell.type == "goal":
-                        done = True
+                        # Implement custom done!
+                        # done = True
                         self._reward(i, rewards, 1)
                     elif fwd_cell.type == "switch":
                         self._handle_switch(i, rewards, fwd_pos, fwd_cell)
