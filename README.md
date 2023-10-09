@@ -9,6 +9,8 @@ pip install -e .
 ```
 
 specify the path to the competition .json files in `mapf_env_test.py`
+the environment will load the map, agent and task files from the relative path provided in the .json
+
 ```
 python3 mapf_env_test.py
 ```
