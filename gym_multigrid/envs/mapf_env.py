@@ -240,14 +240,14 @@ class MapfEnv(MultiGridEnv):
                 for line in file:
                     idx = int(line.split()[0])
                     i, j = self.deserialize_coords(idx, self.num_cols)
-                    print(
-                        "placing goal at ",
-                        i,
-                        j,
-                        " for agent ",
-                        agent_idx,
-                        self.agents[agent_idx].pos,
-                    )
+                    # print(
+                    #     "placing goal at ",
+                    #     i,
+                    #     j,
+                    #     " for agent ",
+                    #     agent_idx,
+                    #     self.agents[agent_idx].pos,
+                    # )
                     agent_idx += 1
 
                     self.put_obj(Goal(self.world, self.GOAL_COLOR_IDX), i, j)
