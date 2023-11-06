@@ -1303,26 +1303,26 @@ class MultiGridEnv(gym.Env):
 
             # Rotate left
             if actions[i] == self.actions.left:
+                self._reward(i, rewards, 0.2)
                 self.agents[i].dir -= 1
                 if self.agents[i].dir < 0:
                     self.agents[i].dir += 4
 
             # Rotate right
             elif actions[i] == self.actions.right:
+                self._reward(i, rewards, 0.2)
                 self.agents[i].dir = (self.agents[i].dir + 1) % 4
 
             # Move forward
             elif actions[i] == self.actions.forward:
                 # Get the contents of the cell in front of the agent
-
                 fwd_cell = self.grid.get(*fwd_pos)
+                self._reward(i, rewards, 1)
                 if fwd_cell is not None:
+                    # this function just checks for any goal!
                     if fwd_cell.type == "goal":
-                        # Implement custom done!
-                        # done = True
-                        self._reward(i, rewards, 1)
-                    elif fwd_cell.type == "switch":
-                        self._handle_switch(i, rewards, fwd_pos, fwd_cell)
+                        self._reward(i, rewards, 20)
+                        self.agents[i].terminated = True
                 elif fwd_cell is None or fwd_cell.can_overlap():
                     self.grid.set(*fwd_pos, self.agents[i])
                     self.grid.set(*self.agents[i].pos, None)

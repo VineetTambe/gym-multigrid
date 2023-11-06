@@ -115,7 +115,7 @@ class MapfEnv(MultiGridEnv):
             grid_size=self.size,
             width=self.num_rows,
             height=self.num_cols,
-            max_steps=10000,
+            max_steps=10,
             # Set this to True for maximum speed
             see_through_walls=False,
             agents=agents,
@@ -176,8 +176,8 @@ class MapfEnv(MultiGridEnv):
         else:
             # pass
             # TODO generate grid as per the map
-            print(f"{self.num_cols=}")
-            print(f"{self.num_rows=}")
+            # print(f"{self.num_cols=}")
+            # print(f"{self.num_rows=}")
             for i in range(self.num_rows):
                 for j in range(self.num_cols):
                     if self.loaded_map[i, j] == 255:
@@ -200,26 +200,24 @@ class MapfEnv(MultiGridEnv):
                     # print(int(line.split()[0]), "line number = ", agent_idx)
                     idx = int(line.split()[0])
                     if idx >= max_idx:
-                        continue
-                    i, j = self.deserialize_coords(idx, self.num_cols)
-                    # self.place_agent(self.agents[agent_idx], top=[row, col])
-                    # print(agent_idx, idx, len(self.agents))
-                    self.put_obj(self.agents[agent_idx], i, j)
+                        self.place_agent(self.agents[agent_idx])
+                    else:
+                        i, j = self.deserialize_coords(idx, self.num_cols)
+                        # self.place_agent(self.agents[agent_idx], top=[row, col])
+                        # print(agent_idx, idx, len(self.agents))
+                        self.put_obj(self.agents[agent_idx], i, j)
 
-                    self.agents[agent_idx].pos = np.array([i, j])
-                    self.agents[agent_idx].init_pos = self.agents[agent_idx].pos
+                        self.agents[agent_idx].pos = np.array([i, j])
+                        self.agents[agent_idx].init_pos = self.agents[agent_idx].pos
 
-                    self.agents[agent_idx].dir = self._rand_int(0, 4)
+                        self.agents[agent_idx].dir = self._rand_int(0, 4)
 
-                    self.agents[agent_idx].init_dir = self.agents[agent_idx].dir
+                        self.agents[agent_idx].init_dir = self.agents[agent_idx].dir
 
                     agent_idx += 1
 
                     if agent_idx >= len(self.agents):
                         break
-
-            # for a in self.agents:
-            #     self.place_agent(a)
         print("Done adding agents!")
 
         # Load the agent goal locations
@@ -227,96 +225,53 @@ class MapfEnv(MultiGridEnv):
             for i in range(len(self.agents)):
                 pos = self.place_obj(
                     Goal(self.world, self.GOAL_COLOR_IDX),
-                    # top=self.goal_pst[i],
                     size=[1, 1],
                 )
                 self.goal_locations.append(pos)
         else:
-            # for i in range(len(self.agents)):
-            # pos = self.place_obj(
-            #     Goal(self.world, self.GOAL_COLOR_IDX),
-            #     # top=self.goal_pst[i],
-            #     size=[1, 1],
-            # )
-            # self.goal_locations.append(pos)
-            # TODO load task from file
             with open(self.task_file_path, "r") as file:
                 agent_idx = 0
                 for line in file:
                     idx = int(line.split()[0])
+                    pos = None
                     if idx >= max_idx:
+                        # continue
                         pos = self.place_obj(
                             Goal(self.world, self.GOAL_COLOR_IDX),
-                            size=[1, 1],
+                            max_tries=100,
                         )
-                        self.goal_locations.append(pos)
+                        if pos is None:
+                            print("---------------------------------")
+                            print("pos in None!")
+                            print("---------------------------------")
+                            continue
                     else:
                         i, j = self.deserialize_coords(idx, self.num_cols)
-                        agent_idx += 1
-
                         self.put_obj(Goal(self.world, self.GOAL_COLOR_IDX), i, j)
-                        self.goal_locations.append([i, j])
+                        pos = [i, j]
 
+                    self.goal_locations.append(pos)
+                    agent_idx += 1
                     if agent_idx >= len(self.agents):
                         break
             print("Done adding goals!")
 
     def _reward(self, i, rewards, reward=1):
-        for j, a in enumerate(self.agents):
-            if a.index == i or a.index == 0:
-                rewards[j] += reward
-            if self.zero_sum:
-                if a.index != i or a.index == 0:
-                    rewards[j] -= reward
-
-    # def _handle_pickup(self, i, rewards, fwd_pos, fwd_cell):
-    #     if fwd_cell:
-    #         if fwd_cell.can_pickup():
-    #             if self.agents[i].carrying is None:
-    #                 self.agents[i].carrying = fwd_cell
-    #                 self.agents[i].carrying.cur_pos = np.array([-1, -1])
-    #                 self.grid.set(*fwd_pos, None)
-    #         elif fwd_cell.type == "agent":
-    #             if fwd_cell.carrying:
-    #                 if self.agents[i].carrying is None:
-    #                     self.agents[i].carrying = fwd_cell.carrying
-    #                     fwd_cell.carrying = None
-
-    # def _handle_drop(self, i, rewards, fwd_pos, fwd_cell):
-    #     if self.agents[i].carrying:
-    #         if fwd_cell:
-    #             if (
-    #                 fwd_cell.type == "objgoal"
-    #                 and fwd_cell.target_type == self.agents[i].carrying.type
-    #             ):
-    #                 if self.agents[i].carrying.index in [0, fwd_cell.index]:
-    #                     self._reward(fwd_cell.index, rewards, fwd_cell.reward)
-    #                     self.agents[i].carrying = None
-    #             elif fwd_cell.type == "agent":
-    #                 if fwd_cell.carrying is None:
-    #                     fwd_cell.carrying = self.agents[i].carrying
-    #                     self.agents[i].carrying = None
-    #         else:
-    #             self.grid.set(*fwd_pos, self.agents[i].carrying)
-    #             self.agents[i].carrying.cur_pos = fwd_pos
-    #             self.agents[i].carrying = None
+        # for j, a in enumerate(self.agents):
+        # a = self.agents[i]
+        # g = self.goal_locations[i]
+        # if a.pos == g.pos:
+        #     rewards[i] += 20
+        # if a.index == i or a.index == 0:
+        rewards[i] += reward
+        # if self.zero_sum:
+        # if a.index != i or a.index == 0:
+        #     rewards[i] -= reward
 
     def step(self, actions):
         obs, rewards, done, info = MultiGridEnv.step(self, actions)
+        if done == True:
+            print("Done! Summary of episode = ")
+            print("Average reward = ", np.mean(rewards))
+            print("Number of agents that reached goal = ", np.sum(rewards > 20))
         return obs, rewards, done, info
-
-
-# class MapfEnv(SoccerGameEnv):
-#     def __init__(self):
-#         super().__init__(
-#             size=None,
-#             height=10,
-#             width=15,
-#             goal_pst=[[1, 5], [13, 5]],
-#             goal_index=[1, 2],
-#             num_balls=[1],
-#             agents_index=[1, 1, 2, 2],
-#             balls_index=[0],
-#             zero_sum=True,
-#             actions_set=SmallActions,
-#         )
