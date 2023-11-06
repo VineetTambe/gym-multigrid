@@ -21,7 +21,8 @@ def main():
             # map_file_path="gym_multigrid/envs/maps/mapf_10x10_2.txt",
             # agent_file_path="gym_multigrid/envs/maps/agents_10x10_2.txt",
             # task_file_path="gym_multigrid/envs/maps/tasks_10x10_2.txt",
-            scenario_file="/home/vineet/competition/Start-Kit/example_problems/city.domain/paris_200.json",
+            # scenario_file="/city.domain/paris_200.json",
+            scenario_file="/home/vineet/competition/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
         )
 
     # elif args.env == "soccer":

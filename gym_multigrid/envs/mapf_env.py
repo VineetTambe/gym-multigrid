@@ -163,6 +163,8 @@ class MapfEnv(MultiGridEnv):
 
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
+        max_idx = self.width * self.height
+
         # Load the map
         if self.map_file_path is None:
             # Generate the surrounding walls
@@ -174,11 +176,13 @@ class MapfEnv(MultiGridEnv):
         else:
             # pass
             # TODO generate grid as per the map
+            print(f"{self.num_cols=}")
+            print(f"{self.num_rows=}")
             for i in range(self.num_rows):
                 for j in range(self.num_cols):
                     if self.loaded_map[i, j] == 255:
                         # obstacle
-                        self.grid.set(j, i, Wall(self.world))
+                        self.grid.set(i, j, Wall(self.world))
 
         print("Done creating map!")
 
@@ -195,7 +199,8 @@ class MapfEnv(MultiGridEnv):
                 for line in file:
                     # print(int(line.split()[0]), "line number = ", agent_idx)
                     idx = int(line.split()[0])
-
+                    if idx >= max_idx:
+                        continue
                     i, j = self.deserialize_coords(idx, self.num_cols)
                     # self.place_agent(self.agents[agent_idx], top=[row, col])
                     # print(agent_idx, idx, len(self.agents))
@@ -239,19 +244,18 @@ class MapfEnv(MultiGridEnv):
                 agent_idx = 0
                 for line in file:
                     idx = int(line.split()[0])
-                    i, j = self.deserialize_coords(idx, self.num_cols)
-                    # print(
-                    #     "placing goal at ",
-                    #     i,
-                    #     j,
-                    #     " for agent ",
-                    #     agent_idx,
-                    #     self.agents[agent_idx].pos,
-                    # )
-                    agent_idx += 1
+                    if idx >= max_idx:
+                        pos = self.place_obj(
+                            Goal(self.world, self.GOAL_COLOR_IDX),
+                            size=[1, 1],
+                        )
+                        self.goal_locations.append(pos)
+                    else:
+                        i, j = self.deserialize_coords(idx, self.num_cols)
+                        agent_idx += 1
 
-                    self.put_obj(Goal(self.world, self.GOAL_COLOR_IDX), i, j)
-                    self.goal_locations.append([i, j])
+                        self.put_obj(Goal(self.world, self.GOAL_COLOR_IDX), i, j)
+                        self.goal_locations.append([i, j])
 
                     if agent_idx >= len(self.agents):
                         break

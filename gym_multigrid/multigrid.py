@@ -604,6 +604,9 @@ class Grid:
         return deepcopy(self)
 
     def set(self, i, j, v):
+        # print(f"set {i=} {j=}")
+        # print(f"{self.width=}")
+        # print(f"{self.height=}")
         assert i >= 0 and i < self.width
         assert j >= 0 and j < self.height
         self.grid[j * self.width + i] = v
