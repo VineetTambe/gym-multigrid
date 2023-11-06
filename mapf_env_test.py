@@ -25,20 +25,6 @@ def main():
             scenario_file="/home/vineet/competition/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
         )
 
-    # elif args.env == "soccer":
-    #     register(
-    #         id="multigrid-soccer-v0",
-    #         entry_point="gym_multigrid.envs:SoccerGame4HEnv10x15N2",
-    #     )
-    #     env = gym.make("multigrid-soccer-v0")
-
-    # else:
-    #     register(
-    #         id="multigrid-collect-v0",
-    #         entry_point="gym_multigrid.envs:CollectGame4HEnv10x10N2",
-    #     )
-    #     env = gym.make("multigrid-collect-v0")
-
     _ = env.reset()
 
     nb_agents = len(env.agents)
