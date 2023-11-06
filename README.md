@@ -15,7 +15,9 @@ the environment will load the map, agent and task files from the relative path p
 python3 mapf_env_test.py
 ```
 ----------------------------
+
 The repo for maps can be found [here](https://github.com/MAPF-Competition/Start-Kit/tree/main)
+
 ----------------------------
 
 Lightweight multi-agent gridworld Gym environment built on the [MiniGrid environment](https://github.com/maximecb/gym-minigrid). 
