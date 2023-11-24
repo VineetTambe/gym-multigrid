@@ -2,6 +2,36 @@ from gym_multigrid.multigrid import *
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import gymnasium as gym
+
+
+class FlatMultiGridObsWrapper(gym.core.ObservationWrapper):
+    """
+    Use the state image as the only observation output, no language/mission.
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.observation_space = env.observation_space
+        imgSpace = env.observation_space
+        self.imgSize = (
+            imgSpace.shape[0]
+            * imgSpace.shape[1]
+            * imgSpace.shape[2]
+            * imgSpace.shape[3]
+        )
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=(self.imgSize,),
+            dtype="uint8",
+        )
+
+    def observation(self, obs):
+        obs_ = [img.flatten() for img in obs]
+        obs_ = np.concatenate(obs_)
+        # obs_ = obs_.flatten()
+        return obs_
 
 
 class MapfEnv(MultiGridEnv):
@@ -21,11 +51,12 @@ class MapfEnv(MultiGridEnv):
         # agents_index=[],
         # balls_index=[],
         # zero_sum=False,
-        agent_view_size=3,
+        agent_view_size=5,
         # map_file_path=None,
         # agent_file_path=None,
         # task_file_path=None,
         scenario_file=None,
+        **kwargs,
     ):
         self.num_agents = None
         self.size = None
@@ -39,7 +70,7 @@ class MapfEnv(MultiGridEnv):
         self.num_cols = None
         self.loaded_map = None
 
-        self.world = World
+        self.world = SmallWorld
 
         self.AGEGNT_COLOR_IDX = 0
         self.GOAL_COLOR_IDX = 1
@@ -109,17 +140,16 @@ class MapfEnv(MultiGridEnv):
         if self.task_file_path is None:
             print("Loading default params! Task file path is None")
 
-        self.world = World
-
         super().__init__(
             grid_size=self.size,
             width=self.num_rows,
             height=self.num_cols,
-            max_steps=10,
             # Set this to True for maximum speed
             see_through_walls=False,
             agents=agents,
             agent_view_size=agent_view_size,
+            objects_set=self.world,
+            **kwargs,
         )
 
     def load_map_from_file(self, file_path):
@@ -164,6 +194,8 @@ class MapfEnv(MultiGridEnv):
     def _gen_grid(self, width, height):
         self.grid = Grid(width, height)
         max_idx = self.width * self.height
+
+        print("Loading from file = ", self.map_file_path)
 
         # Load the map
         if self.map_file_path is None:
@@ -269,9 +301,9 @@ class MapfEnv(MultiGridEnv):
         #     rewards[i] -= reward
 
     def step(self, actions):
-        obs, rewards, done, info = MultiGridEnv.step(self, actions)
-        if done == True:
+        obs, rewards, terminated, truncated, info = MultiGridEnv.step(self, actions)
+        if terminated or truncated:
             print("Done! Summary of episode = ")
             print("Average reward = ", np.mean(rewards))
             print("Number of agents that reached goal = ", np.sum(rewards > 20))
-        return obs, rewards, done, info
+        return obs, rewards, terminated, truncated, info

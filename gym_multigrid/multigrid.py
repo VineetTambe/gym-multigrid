@@ -1,9 +1,11 @@
 import math
-import gym
+import gymnasium as gym
 from enum import IntEnum
 import numpy as np
-from gym import error, spaces, utils
-from gym.utils import seeding
+from typing import Any
+
+# from gym import error, spaces, utils
+# from gym.utils import seeding
 from .rendering import *
 from .window import Window
 import numpy as np
@@ -65,11 +67,23 @@ class SmallWorld:
 
     normalize_obs = 1 / 3
 
-    COLOR_TO_IDX = {"red": 0, "green": 1, "blue": 2, "grey": 3}
-
+    COLOR_TO_IDX = {
+        "red": 0,
+        "green": 1,
+        "blue": 2,
+        "purple": 3,
+        "yellow": 4,
+        "grey": 5,
+    }
     IDX_TO_COLOR = dict(zip(COLOR_TO_IDX.values(), COLOR_TO_IDX.keys()))
 
-    OBJECT_TO_IDX = {"unseen": 0, "empty": 1, "wall": 2, "agent": 3}
+    OBJECT_TO_IDX = {
+        "unseen": 0,
+        "empty": 1,
+        "wall": 2,
+        "goal": 4,
+        "agent": 10,
+    }
 
     IDX_TO_OBJECT = dict(zip(OBJECT_TO_IDX.values(), OBJECT_TO_IDX.keys()))
 
@@ -932,9 +946,10 @@ class MultiGridEnv(gym.Env):
         agent_view_size=7,
         actions_set=SmallActions,
         objects_set=World,
+        render_mode: str | None = None,
     ):
         self.agents = agents
-
+        self.render_mode = render_mode
         # Does the agents have partial or full observation?
         self.partial_obs = partial_obs
 
@@ -948,28 +963,43 @@ class MultiGridEnv(gym.Env):
         self.actions = actions_set
 
         # Actions are discrete integer values
-        self.action_space = spaces.Discrete(len(self.actions.available))
+        self.action_space = gym.spaces.Box(
+            low=0,
+            high=3,
+            shape=(len(self.agents),),
+            dtype=int,
+        )
 
         self.objects = objects_set
 
         if partial_obs:
-            self.observation_space = spaces.Box(
+            self.observation_space = gym.spaces.Box(
                 low=0,
                 high=255,
-                shape=(agent_view_size, agent_view_size, self.objects.encode_dim),
+                shape=(
+                    agent_view_size,
+                    agent_view_size,
+                    self.objects.encode_dim,
+                    len(self.agents),
+                ),
                 dtype="uint8",
             )
 
         else:
-            self.observation_space = spaces.Box(
+            self.observation_space = gym.spaces.Box(
                 low=0,
                 high=255,
-                shape=(width, height, self.objects.encode_dim),
+                shape=(
+                    width,
+                    height,
+                    self.objects.encode_dim,
+                    len(self.agents),
+                ),
                 dtype="uint8",
             )
 
         self.ob_dim = np.prod(self.observation_space.shape)
-        self.ac_dim = self.action_space.n
+        self.ac_dim = self.action_space.shape
 
         # Range of possible rewards
         self.reward_range = (0, 1)
@@ -989,10 +1019,20 @@ class MultiGridEnv(gym.Env):
         # Initialize the state
         self.reset()
 
-    def reset(self):
+    def reset(
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ):
+        super().reset(seed=seed)
         # Generate a new random grid at the start of each episode
         # To keep the same grid for each episode, call env.seed() with
         # the same seed before calling env.reset()
+
+        if seed is not None:
+            self.seed(seed)
+
         self._gen_grid(self.width, self.height)
 
         # These fields should be defined by _gen_grid
@@ -1016,7 +1056,7 @@ class MultiGridEnv(gym.Env):
                 for i in range(len(self.agents))
             ]
         obs = [self.objects.normalize_obs * ob for ob in obs]
-        return obs
+        return obs, {}
 
     def seed(self, seed=1337):
         # Seed the random number generator
@@ -1272,12 +1312,17 @@ class MultiGridEnv(gym.Env):
     def step(self, actions):
         # TODO definition of done!!!!
 
+        # TODO update action extraction
+
         self.step_count += 1
 
-        order = np.random.permutation(len(actions))
+        order = range(len(self.agents))
 
-        rewards = np.zeros(len(actions))
-        done = False
+        rewards = np.zeros(len(self.agents))
+        terminated = False
+        truncated = False
+
+        actions = np.round(actions)
 
         for i in order:
             if (
@@ -1346,14 +1391,16 @@ class MultiGridEnv(gym.Env):
             #         fwd_cell.toggle(self, fwd_pos)
 
             # Done action (not used by default)
-            elif actions[i] == self.actions.done:
-                pass
 
+            # elif actions[i] == self.actions.done:
+            #     pass
             else:
                 assert False, "unknown action"
 
+        # terminated = [a.terminated for a in self.agents]
+
         if self.step_count >= self.max_steps:
-            done = True
+            truncated = True
 
         if self.partial_obs:
             obs = self.gen_obs()
@@ -1365,7 +1412,9 @@ class MultiGridEnv(gym.Env):
 
         obs = [self.objects.normalize_obs * ob for ob in obs]
 
-        return obs, rewards, done, {}
+        rewards = np.sum(rewards)
+
+        return obs, rewards, terminated, truncated, {}
 
     def gen_obs_grid(self):
         """
@@ -1413,7 +1462,6 @@ class MultiGridEnv(gym.Env):
             )
             for grid, vis_mask in zip(grids, vis_masks)
         ]
-
         return obs
 
     def get_obs_render(self, obs, tile_size=TILE_PIXELS // 2):
@@ -1428,7 +1476,7 @@ class MultiGridEnv(gym.Env):
 
         return img
 
-    def render(self, mode="human", close=False, highlight=False, tile_size=TILE_PIXELS):
+    def render(self, close=False, highlight=False, tile_size=TILE_PIXELS):
         """
         Render the whole-grid human view
         """
@@ -1438,7 +1486,7 @@ class MultiGridEnv(gym.Env):
                 self.window.close()
             return
 
-        if mode == "human" and not self.window:
+        if self.render_mode == "human" and not self.window:
             self.window = Window("gym_multigrid")
             self.window.show(block=False)
 
@@ -1486,7 +1534,7 @@ class MultiGridEnv(gym.Env):
             highlight_masks=highlight_masks if highlight else None,
         )
 
-        if mode == "human":
+        if self.render_mode == "human":
             self.window.show_img(img)
 
         return img

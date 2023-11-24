@@ -1,7 +1,9 @@
-import gym
+import gymnasium as gym
 import time
-from gym.envs.registration import register
+
+# from gym.envs.registration import register
 import argparse
+from gym_multigrid.envs.mapf_env import FlatMultiGridObsWrapper
 
 parser = argparse.ArgumentParser(description=None)
 parser.add_argument("-e", "--env", default="mapf", type=str)
@@ -16,28 +18,48 @@ def main():
         #     entry_point="gym_multigrid.envs:MapfEnv",
         # )
         # env = gym.make("multigrid-mapf-v0")
-        env = gym.make(
-            "gym_multigrid:multigrid-mapf-v0",
-            # map_file_path="gym_multigrid/envs/maps/mapf_10x10_2.txt",
-            # agent_file_path="gym_multigrid/envs/maps/agents_10x10_2.txt",
-            # task_file_path="gym_multigrid/envs/maps/tasks_10x10_2.txt",
-            # scenario_file="/city.domain/paris_200.json",
-            scenario_file="/home/vineet/competition/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
+
+        env = FlatMultiGridObsWrapper(
+            gym.make(
+                "gym_multigrid:multigrid-mapf-v0",
+                scenario_file="/home/vineet/competition/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
+                max_steps=10,
+                # render_mode="human",
+            )
         )
+        # env = gym.make(
+        #     "gym_multigrid:multigrid-mapf-v0",
+        #     scenario_file="/home/vineet/competition/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
+        #     max_steps=10,
+        #     # render_mode="human",
+        # )
 
     _ = env.reset()
 
     nb_agents = len(env.agents)
 
+    i = 0
     while True:
-        env.render(mode="human", highlight=True)
+        # env.render()
         time.sleep(0.1)
 
-        ac = [env.action_space.sample() for _ in range(nb_agents)]
+        # ac = [env.action_space.sample() for _ in range(nb_agents)]
+        ac = env.action_space.sample()
 
-        obs, _, done, _ = env.step(ac)
+        print("--------------------------------------------------------")
+        print(type(ac))
+        print(ac)
+        print("--------------------------------------------------------")
+        obs, _, terminated, truncated, _ = env.step(ac)
 
-        if done:
+        # print("--------------------------------------------------------")
+        # print(type(obs))
+        # print(obs[0])
+        # print(obs[0].shape)
+        # print("--------------------------------------------------------")
+        i += 1
+        if terminated or truncated:
+            print("Num iters ", i)
             break
 
 
