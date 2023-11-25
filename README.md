@@ -1,5 +1,7 @@
 # Multi-Agent Gridworld Environment (MultiGrid)
 
+<img src="./gifs/multi-grid.gif" height="350"/> 
+
 ## Installation
 How to run:
 
