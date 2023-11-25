@@ -289,16 +289,7 @@ class MapfEnv(MultiGridEnv):
             print("Done adding goals!")
 
     def _reward(self, i, rewards, reward=1):
-        # for j, a in enumerate(self.agents):
-        # a = self.agents[i]
-        # g = self.goal_locations[i]
-        # if a.pos == g.pos:
-        #     rewards[i] += 20
-        # if a.index == i or a.index == 0:
         rewards[i] += reward
-        # if self.zero_sum:
-        # if a.index != i or a.index == 0:
-        #     rewards[i] -= reward
 
     def step(self, actions):
         obs, rewards, terminated, truncated, info = MultiGridEnv.step(self, actions)

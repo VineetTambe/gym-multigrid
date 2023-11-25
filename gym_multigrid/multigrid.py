@@ -1374,26 +1374,6 @@ class MultiGridEnv(gym.Env):
                     self.agents[i].pos = fwd_pos
                 self._handle_special_moves(i, rewards, fwd_pos, fwd_cell)
 
-            # elif "build" in self.actions.available and actions[i] == self.actions.build:
-            #     self._handle_build(i, rewards, fwd_pos, fwd_cell)
-
-            # # Pick up an object
-            # elif actions[i] == self.actions.pickup:
-            #     self._handle_pickup(i, rewards, fwd_pos, fwd_cell)
-
-            # # Drop an object
-            # elif actions[i] == self.actions.drop:
-            #     self._handle_drop(i, rewards, fwd_pos, fwd_cell)
-
-            # # Toggle/activate an object
-            # elif actions[i] == self.actions.toggle:
-            #     if fwd_cell:
-            #         fwd_cell.toggle(self, fwd_pos)
-
-            # Done action (not used by default)
-
-            # elif actions[i] == self.actions.done:
-            #     pass
             else:
                 assert False, "unknown action"
 
