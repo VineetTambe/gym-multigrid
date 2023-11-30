@@ -2,7 +2,7 @@ import math
 import gymnasium as gym
 from enum import IntEnum
 import numpy as np
-from typing import Any
+from typing import Any, Dict
 
 # from gym import error, spaces, utils
 # from gym.utils import seeding
@@ -946,7 +946,7 @@ class MultiGridEnv(gym.Env):
         agent_view_size=7,
         actions_set=SmallActions,
         objects_set=World,
-        render_mode: str | None = None,
+        render_mode: str=None,
     ):
         self.agents = agents
         self.render_mode = render_mode
@@ -1022,8 +1022,8 @@ class MultiGridEnv(gym.Env):
     def reset(
         self,
         *,
-        seed: int | None = None,
-        options: dict[str, Any] | None = None,
+        seed: int = None,
+        options: Dict[str, Any] = None,
     ):
         super().reset(seed=seed)
         # Generate a new random grid at the start of each episode

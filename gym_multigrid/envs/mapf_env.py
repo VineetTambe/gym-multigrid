@@ -4,6 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gymnasium as gym
 
+DIR_MAP = {
+    (0, 1): 0,  # right
+    (-1, 0): 1,  # up
+    (0, -1): 2,  # left
+    (1, 0): 3,  # down
+}
 
 class FlatMultiGridObsWrapper(gym.core.ObservationWrapper):
     """
@@ -56,6 +62,7 @@ class MapfEnv(MultiGridEnv):
         # agent_file_path=None,
         # task_file_path=None,
         scenario_file=None,
+        edge_weights=None,
         **kwargs,
     ):
         self.num_agents = None
@@ -140,6 +147,16 @@ class MapfEnv(MultiGridEnv):
         if self.task_file_path is None:
             print("Loading default params! Task file path is None")
 
+        # Set edge weights. Edge weights are stored as array of shape [h, w, 4]
+        # where the last dimension encodes the edge weight of the corresponding
+        # node in the right, up, left, down directions.
+        if edge_weights is None:
+            # If no weights are provided, set all valid edge weights to 1
+            edge_weights = np.ones((self.num_rows, self.num_cols, 4))
+        # Set weights of all invalid edges to -1
+        self.edge_weights = self._set_invalid_edge_weights(edge_weights)
+        assert self.edge_weights.shape == (self.num_rows, self.num_cols, 4)
+
         super().__init__(
             grid_size=self.size,
             width=self.num_rows,
@@ -151,6 +168,87 @@ class MapfEnv(MultiGridEnv):
             objects_set=self.world,
             **kwargs,
         )
+
+        # Incorporate edge weights in observation space
+        if self.partial_obs:
+            self.observation_space = gym.spaces.Box(
+                low=0,
+                high=255,
+                shape=(
+                    agent_view_size,
+                    agent_view_size,
+                    self.objects.encode_dim + 4, # plut 4 for edge weights
+                    len(self.agents),
+                ),
+                dtype="uint8",
+            )
+
+        else:
+            self.observation_space = gym.spaces.Box(
+                low=0,
+                high=255,
+                shape=(
+                    self.width,
+                    self.height,
+                    self.objects.encode_dim + 4, # plut 4 for edge weights
+                    len(self.agents),
+                ),
+                dtype="uint8",
+            )
+
+        self.ob_dim = np.prod(self.observation_space.shape)
+
+        # Initialize the state
+        self.reset()
+
+    def _concat_edge_weights_to_obs(self, obs):
+        view_size = self.agents[0].view_size
+        pad_size = view_size // 2
+        padded_edge_weights = np.array([np.pad(self.edge_weights[:,:,i], pad_size, mode="constant") for i in range(4)])
+        padded_edge_weights = np.moveaxis(padded_edge_weights, 0, 2)
+        for i, agent in enumerate(self.agents):
+            # Get edge weights in the view window, assuming partial_obs is True
+            x, y = agent.pos
+            slice_start_x = x
+            slice_end_x = x + view_size
+            slice_start_y = y
+            slice_end_y = y + view_size
+            partial_edge_weights = padded_edge_weights[slice_start_x:slice_end_x,slice_start_y:slice_end_y,:]
+            assert partial_edge_weights.shape == (view_size, view_size, 4)
+
+            # Append edge weights to the last 4 dim
+            obs[i] = np.concatenate([obs[i], partial_edge_weights], axis=-1)
+        return obs
+
+    def reset(
+        self,
+        *,
+        seed: int = None,
+        options: Dict[str, Any] = None,
+    ):
+        obs, info = super().reset(seed=seed, options=options)
+        obs = self._concat_edge_weights_to_obs(obs)
+        return obs, info
+
+
+    def _set_invalid_edge_weights(self, edge_weights):
+        """Set weights of all invalid edges to -1"""
+        for i in range(self.num_rows):
+            for j in range(self.num_cols):
+                # Non-zero means non-traversable
+                if self.loaded_map[i, j] != 0:
+                    # All edges from the node are blocked
+                    edge_weights[i, j] = -1
+
+                # Check each neighbor
+                # All edges to non-traversable neighbors are blocked
+                for dx, dy in DIR_MAP.keys():
+                    n_i = i + dx
+                    n_j = j + dy
+                    if 0 <= n_i < self.num_rows and 0 <= n_j < self.num_cols \
+                        and self.loaded_map[n_i, n_j] != 0:
+                        edge_weights[i, j, DIR_MAP[(dx, dy)]] = -1
+        return edge_weights
 
     def load_map_from_file(self, file_path):
         matrix = []
@@ -293,6 +391,7 @@ class MapfEnv(MultiGridEnv):
 
     def step(self, actions):
         obs, rewards, terminated, truncated, info = MultiGridEnv.step(self, actions)
+        obs = self._concat_edge_weights_to_obs(obs)
         if terminated or truncated:
             print("Done! Summary of episode = ")
             print("Average reward = ", np.mean(rewards))

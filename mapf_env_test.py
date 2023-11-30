@@ -1,5 +1,6 @@
 import gymnasium as gym
 import time
+import numpy as np
 
 # from gym.envs.registration import register
 import argparse
@@ -22,7 +23,8 @@ def main():
         env = FlatMultiGridObsWrapper(
             gym.make(
                 "gym_multigrid:multigrid-mapf-v0",
-                scenario_file="/home/vineet/competition/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
+                scenario_file="/media/project0/MAPF_group/highway_optimization/MAPFCompetition2023/example_problems/warehouse.domain/warehouse_small_10.json",
+                edge_weights=np.random.rand(33, 57, 4), # shape [h, w, 4]
                 max_steps=10,
                 # render_mode="human",
             )
