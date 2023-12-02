@@ -4,7 +4,7 @@ import numpy as np
 
 # from gym.envs.registration import register
 import argparse
-from gym_multigrid.envs.mapf_env import FlatMultiGridObsWrapper
+from gym_multigrid.envs.mapf_env import *
 
 parser = argparse.ArgumentParser(description=None)
 parser.add_argument("-e", "--env", default="mapf", type=str)
@@ -20,21 +20,30 @@ def main():
         # )
         # env = gym.make("multigrid-mapf-v0")
 
-        env = FlatMultiGridObsWrapper(
-            gym.make(
-                "gym_multigrid:multigrid-mapf-v0",
-                scenario_file="/media/project0/MAPF_group/highway_optimization/MAPFCompetition2023/example_problems/warehouse.domain/warehouse_small_10.json",
-                edge_weights=np.random.rand(33, 57, 4), # shape [h, w, 4]
-                max_steps=10,
-                # render_mode="human",
-            )
-        )
+        # env = FlatMultiGridObsWrapper(
+        #     gym.make(
+        #         "gym_multigrid:multigrid-mapf-v0",
+        #         scenario_file="/media/project0/MAPF_group/highway_optimization/MAPFCompetition2023/example_problems/warehouse.domain/warehouse_small_10.json",
+        #         edge_weights=np.random.rand(33, 57, 4), # shape [h, w, 4]
+        #         max_steps=10,
+        #         # render_mode="human",
+        #     )
+        # )
         # env = gym.make(
         #     "gym_multigrid:multigrid-mapf-v0",
-        #     scenario_file="/home/vineet/competition/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
+        #     scenario_file="/home/admin/multi-agent-rl/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
         #     max_steps=10,
         #     # render_mode="human",
         # )
+        env = StackMultiGridObsWrapper(
+            gym.make(
+                "gym_multigrid:multigrid-mapf-v0",
+                scenario_file="/home/admin/multi-agent-rl/Start-Kit/example_problems/warehouse.domain/warehouse_small_10.json",
+                # max_steps=10,
+                # render_mode="human",
+                # partial_obs=False,
+            )
+        )
 
     _ = env.reset()
 
@@ -48,16 +57,16 @@ def main():
         # ac = [env.action_space.sample() for _ in range(nb_agents)]
         ac = env.action_space.sample()
 
-        print("--------------------------------------------------------")
-        print(type(ac))
-        print(ac)
-        print("--------------------------------------------------------")
+        # print("--------------------------------------------------------")
+        # print(type(ac))
+        # print(ac)
+        # print("--------------------------------------------------------")
         obs, _, terminated, truncated, _ = env.step(ac)
 
         # print("--------------------------------------------------------")
         # print(type(obs))
-        # print(obs[0])
-        # print(obs[0].shape)
+        # print(obs)
+        # # print(obs[1].shape)
         # print("--------------------------------------------------------")
         i += 1
         if terminated or truncated:

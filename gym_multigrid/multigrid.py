@@ -28,7 +28,8 @@ COLOR_NAMES = sorted(list(COLORS.keys()))
 
 class World:
     encode_dim = 6
-
+    min_value = 0
+    mamx_value = 12
     normalize_obs = 1
 
     # Used to map colors to integers
@@ -64,7 +65,8 @@ class World:
 
 class SmallWorld:
     encode_dim = 3
-
+    min_value = 0
+    max_value = 10
     normalize_obs = 1 / 3
 
     COLOR_TO_IDX = {
@@ -806,11 +808,17 @@ class Grid:
                             array[i, j, 3] = 0
                             array[i, j, 4] = 0
                             array[i, j, 5] = 0
-
+                    # More channels to the output can be added here
                     else:
                         array[i, j, :] = v.encode(
                             world, current_agent=np.array_equal(agent_pos, (i, j))
                         )
+                        # More channels to the output can be added here
+
+        # the output till here is a 3 channel image with
+        # the first channel being the object type,
+        # the second channel being the color and
+        # the third channel being the direction the agent is facing towards
 
         return array
 
@@ -974,6 +982,8 @@ class MultiGridEnv(gym.Env):
 
         if partial_obs:
             self.observation_space = gym.spaces.Box(
+                # low=objects_set.min_value,
+                # high=objects_set.min_value,
                 low=0,
                 high=255,
                 shape=(
@@ -984,7 +994,6 @@ class MultiGridEnv(gym.Env):
                 ),
                 dtype="uint8",
             )
-
         else:
             self.observation_space = gym.spaces.Box(
                 low=0,
@@ -993,7 +1002,7 @@ class MultiGridEnv(gym.Env):
                     width,
                     height,
                     self.objects.encode_dim,
-                    len(self.agents),
+                    # len(self.agents),
                 ),
                 dtype="uint8",
             )
@@ -1056,6 +1065,8 @@ class MultiGridEnv(gym.Env):
                 for i in range(len(self.agents))
             ]
         obs = [self.objects.normalize_obs * ob for ob in obs]
+
+        # obs = self.objects.normalize_obs * self.grid.encode(self.objects)
         return obs, {}
 
     def seed(self, seed=1337):
@@ -1391,6 +1402,7 @@ class MultiGridEnv(gym.Env):
             ]
 
         obs = [self.objects.normalize_obs * ob for ob in obs]
+        # obs = self.objects.normalize_obs * self.grid.encode(self.objects)
 
         rewards = np.sum(rewards)
 

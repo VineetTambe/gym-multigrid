@@ -3,6 +3,12 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 import gymnasium as gym
+import torch as th
+import torch.nn as nn
+from gymnasium import spaces
+
+from stable_baselines3 import PPO
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 DIR_MAP = {
     (0, 1): 0,  # right
@@ -33,11 +39,122 @@ class FlatMultiGridObsWrapper(gym.core.ObservationWrapper):
             dtype="uint8",
         )
 
+        print("Using FlatMultiGridObsWrapper")
+
     def observation(self, obs):
         obs_ = [img.flatten() for img in obs]
         obs_ = np.concatenate(obs_)
         # obs_ = obs_.flatten()
         return obs_
+
+
+class StackMultiGridObsWrapper(gym.core.ObservationWrapper):
+    """
+    Use the state image as the only observation output, no language/mission.
+    """
+
+    def __init__(self, env):
+        super().__init__(env)
+        self.observation_space = env.observation_space
+        imgSpace = env.observation_space
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=(
+                imgSpace.shape[3] * imgSpace.shape[2],
+                imgSpace.shape[0],
+                imgSpace.shape[1],
+            ),
+            dtype="uint8",
+        )
+
+        print("Using StackMultiGridObsWrapper")
+
+    def observation(self, obs):
+        # convert every element of obs to channel first for torch from HxWxC to CxHxW
+        # return obs.transpose(2, 0, 1)
+        obs = [np.transpose(img, (2, 0, 1)) for img in obs]
+        obs_ = np.vstack(obs)
+        return obs_
+
+
+class CustomCnnFeatureExtractor(BaseFeaturesExtractor):
+    """
+    :param observation_space: (gym.Space)
+    :param features_dim: (int) Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    """
+
+    def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
+        super().__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+
+        n_input_channels = observation_space.shape[0]
+        # self.cnn = nn.Sequential(
+        #     nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+        #     nn.ReLU(),
+        #     nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+        #     nn.ReLU(),
+        #     nn.Flatten(),
+        # )
+
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 16, (2, 2)),
+            nn.ReLU(),
+            nn.Conv2d(16, 32, (2, 2)),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, (2, 2)),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        sample_observation = th.as_tensor(observation_space.sample()[None]).float()
+
+        with th.no_grad():
+            n_flatten = self.cnn(sample_observation).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+        print(self.cnn)
+        print(self.linear)
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        # pred = []
+        # print("---------------------------------")
+        # print(f"{observations.shape=}")
+        # print(f"{self.n_agents=}")
+        # print("---------------------------------")
+
+        # for env_num in range(observations.shape[0]):
+        #     # for agent in range(self.n_agents):
+        #     p = self.linear(self.cnn(observations[env_num]))
+        #     print("---------------------------------")
+        #     print(f"{p.shape=}")
+        #     print("---------------------------------")
+        #     pred.append(p)
+        #     # do a batch pass on num agents
+        # # return reu
+
+        # print("---------------------------------")
+        # print("Prediction cycle is successful")
+        # print("---------------------------------")
+        # return th.stack(pred, dim=0)
+
+        # stack all the observations for 1st axis
+        # obs = th.stack(observations, dim=0)
+        # obs = th.stack(observations.chunk(observations.shape[0], dim=0), dim=0).view(
+        #     observations.shape[0] * observations.shape[1],
+        #     observations.shape[2],
+        #     observations.shape[3],
+        #     observations.shape[4],
+        # )
+        # act = self.linear(self.cnn(obs))
+        # print(f"{act.shape=}")
+        # return act
+
+        return self.linear(self.cnn(observations))
 
 
 class MapfEnv(MultiGridEnv):
@@ -47,20 +164,7 @@ class MapfEnv(MultiGridEnv):
 
     def __init__(
         self,
-        # size=10,
-        # view_size=3,
-        # width=None,
-        # height=None,
-        # goal_pst=[],
-        # goal_index=[],
-        # num_balls=[],
-        # agents_index=[],
-        # balls_index=[],
-        # zero_sum=False,
         agent_view_size=5,
-        # map_file_path=None,
-        # agent_file_path=None,
-        # task_file_path=None,
         scenario_file=None,
         edge_weights=None,
         **kwargs,
@@ -166,6 +270,7 @@ class MapfEnv(MultiGridEnv):
             agents=agents,
             agent_view_size=agent_view_size,
             objects_set=self.world,
+            max_steps=1000,
             **kwargs,
         )
 
