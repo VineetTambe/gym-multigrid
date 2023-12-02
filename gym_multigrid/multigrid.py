@@ -1359,21 +1359,21 @@ class MultiGridEnv(gym.Env):
 
             # Rotate left
             if actions[i] == self.actions.left:
-                self._reward(i, rewards, 0.2)
+                self._reward(i, rewards, 0.01)
                 self.agents[i].dir -= 1
                 if self.agents[i].dir < 0:
                     self.agents[i].dir += 4
 
             # Rotate right
             elif actions[i] == self.actions.right:
-                self._reward(i, rewards, 0.2)
+                self._reward(i, rewards, 0.01)
                 self.agents[i].dir = (self.agents[i].dir + 1) % 4
 
             # Move forward
             elif actions[i] == self.actions.forward:
                 # Get the contents of the cell in front of the agent
                 fwd_cell = self.grid.get(*fwd_pos)
-                self._reward(i, rewards, 1)
+                self._reward(i, rewards, 0.1)
                 if fwd_cell is not None:
                     # this function just checks for any goal!
                     if fwd_cell.type == "goal":
