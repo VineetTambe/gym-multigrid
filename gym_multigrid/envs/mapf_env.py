@@ -85,23 +85,23 @@ class CustomCnnFeatureExtractor(BaseFeaturesExtractor):
         # Re-ordering will be done by pre-preprocessing or wrapper
 
         n_input_channels = observation_space.shape[0]
-        # self.cnn = nn.Sequential(
-        #     nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
-        #     nn.ReLU(),
-        #     nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
-        #     nn.ReLU(),
-        #     nn.Flatten(),
-        # )
-
         self.cnn = nn.Sequential(
-            nn.Conv2d(n_input_channels, 16, (2, 2)),
+            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
             nn.ReLU(),
-            nn.Conv2d(16, 32, (2, 2)),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, (2, 2)),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
             nn.ReLU(),
             nn.Flatten(),
         )
+
+        # self.cnn = nn.Sequential(
+        #     nn.Conv2d(n_input_channels, 16, (2, 2)),
+        #     nn.ReLU(),
+        #     nn.Conv2d(16, 32, (2, 2)),
+        #     nn.ReLU(),
+        #     nn.Conv2d(32, 64, (2, 2)),
+        #     nn.ReLU(),
+        #     nn.Flatten(),
+        # )
 
         # Compute shape by doing one forward pass
         sample_observation = th.as_tensor(observation_space.sample()[None]).float()
