@@ -203,16 +203,34 @@ class MapfEnv(MultiGridEnv):
 
     def _concat_edge_weights_to_obs(self, obs):
         view_size = self.agents[0].view_size
-        pad_size = view_size // 2
+        pad_size = view_size - 1
         padded_edge_weights = np.array([np.pad(self.edge_weights[:,:,i], pad_size, mode="constant") for i in range(4)])
         padded_edge_weights = np.moveaxis(padded_edge_weights, 0, 2)
+        # Obtain edge weights in front of the agent
         for i, agent in enumerate(self.agents):
             # Get edge weights in the view window, assuming partial_obs is True
+            # Centered at (x, y), get a matrix of size [view_size, view_size]
             x, y = agent.pos
-            slice_start_x = x
-            slice_end_x = x + view_size
-            slice_start_y = y
-            slice_end_y = y + view_size
+
+            # Move (x, y) to the center of the view
+            if agent.dir == 0:
+                y += view_size // 2
+            elif agent.dir == 1:
+                x += view_size // 2
+            elif agent.dir == 2:
+                y -= view_size // 2
+            elif agent.dir == 3:
+                x -= view_size // 2
+
+            # Transform (x, y) to padded edge weight matrix
+            x += pad_size
+            y += pad_size
+
+            # Slice
+            slice_start_x = x - view_size // 2
+            slice_end_x = x + view_size // 2 + 1
+            slice_start_y = y - view_size // 2
+            slice_end_y = y + view_size // 2 + 1
             partial_edge_weights = padded_edge_weights[slice_start_x:slice_end_x,slice_start_y:slice_end_y,:]
             assert partial_edge_weights.shape == (view_size, view_size, 4)
 
