@@ -916,10 +916,10 @@ class SmallActions:
     available = ["still", "left", "right", "forward"]
 
     # Turn left, turn right, move forward
-    still = 0
-    left = 1
-    right = 2
-    forward = 3
+    left = 0
+    right = 1
+    forward = 2
+    still = 3
 
 
 class MineActions:
@@ -972,10 +972,10 @@ class MultiGridEnv(gym.Env):
 
         # Actions are discrete integer values
         self.action_space = gym.spaces.Box(
-            low=0,
-            high=3,
+            low=-1,
+            high=1,
             shape=(len(self.agents),),
-            dtype=int,
+            dtype=float,
         )
 
         self.objects = objects_set
@@ -1332,8 +1332,11 @@ class MultiGridEnv(gym.Env):
         rewards = np.zeros(len(self.agents))
         terminated = False
         truncated = False
+        # scale actions back to 0 to 3 for our actions!
 
-        actions = np.round(actions)
+        actions = np.round((actions + 1) * 1.5)
+
+        print(actions)
 
         for i in order:
             if (
