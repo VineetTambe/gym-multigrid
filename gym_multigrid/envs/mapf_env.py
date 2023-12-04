@@ -79,7 +79,9 @@ class CustomCnnFeatureExtractor(BaseFeaturesExtractor):
         This corresponds to the number of unit for the last layer.
     """
 
-    def __init__(self, observation_space: spaces.Box, features_dim: int = 256):
+    def __init__(
+        self, observation_space: spaces.Box, features_dim: int = 256, dropout=0.0
+    ):
         super().__init__(observation_space, features_dim)
         # We assume CxHxW images (channels first)
         # Re-ordering will be done by pre-preprocessing or wrapper
@@ -109,7 +111,9 @@ class CustomCnnFeatureExtractor(BaseFeaturesExtractor):
         with th.no_grad():
             n_flatten = self.cnn(sample_observation).shape[1]
 
-        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+        self.linear = nn.Sequential(
+            nn.Linear(n_flatten, features_dim), nn.Dropout(dropout), nn.ReLU()
+        )
 
         print(self.cnn)
         print(self.linear)

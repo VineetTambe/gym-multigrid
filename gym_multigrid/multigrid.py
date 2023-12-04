@@ -1332,11 +1332,10 @@ class MultiGridEnv(gym.Env):
         rewards = np.zeros(len(self.agents))
         terminated = False
         truncated = False
-        # scale actions back to 0 to 3 for our actions!
-
+        # scale actions back to 0 to 3 for our actions!s
         actions = np.round((actions + 1) * 1.5)
 
-        print(actions)
+        # print(actions)
 
         for i in order:
             if (
