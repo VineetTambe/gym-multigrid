@@ -9,6 +9,7 @@ from typing import Any
 from .rendering import *
 from .window import Window
 import numpy as np
+import torch
 
 # Size in pixels of a tile in the full-scale human view
 TILE_PIXELS = 32
@@ -150,12 +151,18 @@ class WorldObj:
 
     def encode(self, world, current_agent=False):
         """Encode the a description of this object as a 3-tuple of integers"""
+
+        goal = 0
+        if self.color == "green":
+            goal = world.COLOR_TO_IDX[self.color]
+
         if world.encode_dim == 3:
-            return (world.OBJECT_TO_IDX[self.type], world.COLOR_TO_IDX[self.color], 0)
+            # print("HERE")
+            return (world.OBJECT_TO_IDX[self.type], goal, 0)
         else:
             return (
                 world.OBJECT_TO_IDX[self.type],
-                world.COLOR_TO_IDX[self.color],
+                goal,
                 0,
                 0,
                 0,
@@ -424,51 +431,58 @@ class Agent(WorldObj):
 
     def encode(self, world, current_agent=False):
         """Encode the a description of this object as a 3-tuple of integers"""
+
+        goal = 0
+        if self.color == "green":
+            goal = world.COLOR_TO_IDX[self.color]
+
         if world.encode_dim == 3:
             return (
                 world.OBJECT_TO_IDX[self.type],
-                world.COLOR_TO_IDX[self.color],
+                goal,
                 self.dir,
             )
-        elif self.carrying:
-            if current_agent:
-                return (
-                    world.OBJECT_TO_IDX[self.type],
-                    world.COLOR_TO_IDX[self.color],
-                    world.OBJECT_TO_IDX[self.carrying.type],
-                    world.COLOR_TO_IDX[self.carrying.color],
-                    self.dir,
-                    1,
-                )
-            else:
-                return (
-                    world.OBJECT_TO_IDX[self.type],
-                    world.COLOR_TO_IDX[self.color],
-                    world.OBJECT_TO_IDX[self.carrying.type],
-                    world.COLOR_TO_IDX[self.carrying.color],
-                    self.dir,
-                    0,
-                )
 
-        else:
-            if current_agent:
-                return (
-                    world.OBJECT_TO_IDX[self.type],
-                    world.COLOR_TO_IDX[self.color],
-                    0,
-                    0,
-                    self.dir,
-                    1,
-                )
-            else:
-                return (
-                    world.OBJECT_TO_IDX[self.type],
-                    world.COLOR_TO_IDX[self.color],
-                    0,
-                    0,
-                    self.dir,
-                    0,
-                )
+        # elif self.carrying:
+        #     if current_agent:
+        #         print("HERE")
+        #         return (
+        #             world.OBJECT_TO_IDX[self.type],
+        #             goal,
+        #             world.OBJECT_TO_IDX[self.carrying.type],
+        #             world.COLOR_TO_IDX[self.carrying.color],
+        #             self.dir,
+        #             1,
+        #         )
+        #     else:
+        #         return (
+        #             world.OBJECT_TO_IDX[self.type],
+        #             goal,
+        #             world.OBJECT_TO_IDX[self.carrying.type],
+        #             world.COLOR_TO_IDX[self.carrying.color],
+        #             self.dir,
+        #             0,
+        #         )
+
+        # else:
+        #     if current_agent:
+        #         return (
+        #             world.OBJECT_TO_IDX[self.type],
+        #             goal,
+        #             0,
+        #             0,
+        #             self.dir,
+        #             1,
+        #         )
+        #     else:
+        #         return (
+        #             world.OBJECT_TO_IDX[self.type],
+        #             goal,
+        #             0,
+        #             0,
+        #             self.dir,
+        #             0,
+        #         )
 
     @property
     def dir_vec(self):
@@ -884,6 +898,7 @@ class Grid:
 
 
 class Actions:
+    size = 8
     available = [
         "still",
         "left",
@@ -913,6 +928,7 @@ class Actions:
 
 
 class SmallActions:
+    size = 4
     available = ["still", "left", "right", "forward"]
 
     # Turn left, turn right, move forward
@@ -923,6 +939,7 @@ class SmallActions:
 
 
 class MineActions:
+    size = 5
     available = ["still", "left", "right", "forward", "build"]
 
     still = 0
@@ -974,7 +991,7 @@ class MultiGridEnv(gym.Env):
         self.action_space = gym.spaces.Box(
             low=-1,
             high=1,
-            shape=(len(self.agents),),
+            shape=(len(self.agents), actions_set.size),
             dtype=float,
         )
 
@@ -1332,8 +1349,17 @@ class MultiGridEnv(gym.Env):
         rewards = np.zeros(len(self.agents))
         terminated = False
         truncated = False
-        # scale actions back to 0 to 3 for our actions!s
-        actions = np.round((actions + 1) * 1.5)
+
+        # renormalize the actions to 0 to 1
+        actions = (actions + 1) / 2
+
+        # take actions with the highest probability
+        # TODO replace this with pytorch categorical distribution sampling
+        # actions = np.argmax(actions, axis=1)
+
+        torch_actions = torch.tensor(actions, dtype=torch.float32)
+        resampled_indices = torch.multinomial(torch_actions, 1)
+        actions = resampled_indices.numpy().squeeze()
 
         # print(actions)
 
