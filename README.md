@@ -1,5 +1,7 @@
 # Multi-Agent Gridworld Environment (MultiGrid)
 
+For overall project summary click [here](https://drive.google.com/file/d/14SvbK--8kCL1gUKgQkz64MbvnBgaV6Nh/view?usp=sharing)
+
 <img src="./gifs/multi-grid.gif" height="350"/> 
 
 ## Installation
